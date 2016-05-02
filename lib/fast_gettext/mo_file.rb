@@ -5,6 +5,8 @@ module FastGettext
   class MoFile
     PLURAL_SEPERATOR = "\000"
 
+    attr_reader :data
+
     # file => path or FastGettext::GetText::MOFile
     def initialize(file)
       if file.is_a? FastGettext::GetText::MOFile

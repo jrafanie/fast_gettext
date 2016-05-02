@@ -1,0 +1,59 @@
+require "spec_helper"
+
+describe 'FastGettext::TranslationRepository::LazyMo' do
+  before do
+    @rep = FastGettext::TranslationRepository.build('test',:path=>File.join('spec', 'locale'), :type => :lazy_mo)
+    @rep.is_a?(FastGettext::TranslationRepository::LazyMo).should == true
+  end
+
+  it "can be built" do
+    @rep.available_locales.sort.should == ['de','en','gsw_CH']
+  end
+
+  it "can translate" do
+    FastGettext.locale = 'de'
+    @rep['car'].should == 'Auto'
+  end
+
+  it "can pluralize" do
+    FastGettext.locale = 'de'
+    @rep.plural('Axis','Axis').should == ['Achse','Achsen']
+  end
+
+  describe "#reload" do
+    before do
+      mo_file = FastGettext::LazyMoFile.new('spec/locale/de/LC_MESSAGES/test2.mo')
+      empty_mo_file = FastGettext::LazyMoFile.empty
+
+      FastGettext::LazyMoFile.stub(:new).and_return(empty_mo_file)
+      FastGettext::LazyMoFile.stub(:new).with('spec/locale/de/LC_MESSAGES/test.mo').and_return(mo_file)
+    end
+
+    it "can reload" do
+      FastGettext.locale = 'de'
+
+      @rep['Untranslated and translated in test2'].should be_nil
+
+      @rep.reload
+
+      @rep['Untranslated and translated in test2'].should == 'Translated'
+    end
+
+    it "returns true" do
+      @rep.reload.should == true
+    end
+  end
+
+  it "has access to the mo repositories pluralisation rule" do
+    FastGettext.locale = 'en'
+    rep = FastGettext::TranslationRepository.build('plural_test',:path=>File.join('spec','locale'))
+    rep['car'].should == 'Test'#just check it is loaded correctly
+    rep.pluralisation_rule.call(2).should == 3
+  end
+
+  it "can work in SAFE mode" do
+    pending_if RUBY_VERSION > "2.0" do
+      `ruby spec/cases/safe_mode_can_handle_locales.rb 2>&1`.should == 'true'
+    end
+  end
+end
